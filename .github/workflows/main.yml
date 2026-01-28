@@ -4,28 +4,29 @@ on: workflow_dispatch
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 360 # 6 hours max
+    timeout-minutes: 360
     steps:
-      - name: Download & Install Ngrok
+      - name: Download and Extract Ngrok
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/bPR9B2hLS7X/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip
+          Expand-Archive ngrok.zip -DestinationPath .
       - name: Authenticate Ngrok
-        run: .\ngrok\ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-      - name: Enable RDP
+        run: .\ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+      - name: Setup Password and Enable RDP
         run: |
+          net user runneradmin YourPassword123!
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
       - name: Create Tunnel
-        run: Start-Process .\ngrok\ngrok.exe -ArgumentList "tcp 3389"
-      - name: Keep Alive
+        run: Start-Process .\ngrok.exe -ArgumentList "tcp --region us 3389"
+      - name: Get RDP Address
         run: |
-          Write-Host "RDP Address:"
-          curl --silent http://127.0.0.1:4040/api/tunnels | Select-String -Pattern 'tcp://(.+?)"'
-          $n = 360
-          while($n -gt 0) {
-            Write-Host "Remaining time: $n minutes"
-            Start-Sleep -Seconds 60
-            $n--
-          }
+          $RDP = curl http://127.0.0.1:4040/api/tunnels | ConvertFrom-Json
+          Write-Host "--- CONNECT TO THIS ADDRESS ---"
+          Write-Host $RDP.tunnels.public_url
+          Write-Host "Username: runneradmin"
+          Write-Host "Password: YourPassword123!"
+          Write-Host "-------------------------------"
+      - name: Keep Alive
+        run: Start-Sleep -Seconds 21600
