@@ -8,6 +8,7 @@ jobs:
     steps:
       - name: Download and Extract Ngrok
         run: |
+          # Using a more direct stable link
           Invoke-WebRequest https://bin.equinox.io/c/bPR9B2hLS7X/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
           Expand-Archive ngrok.zip -DestinationPath .
       - name: Authenticate Ngrok
